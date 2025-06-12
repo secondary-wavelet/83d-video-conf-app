@@ -11,6 +11,8 @@ class Client:
         """Establishes a connection with the given IP"""
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((server_ip, server_port))
+        self.socket.sendall(f"{self.ID}\n".encode())
+        self.socket.recv
 
     def disconnect(self):
         self.socket.close()

@@ -18,7 +18,7 @@ class Server:
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.socket.bind((self.IP, self.PORT))
             self.socket.listen()
-            # print(f"Server listening on {self.IP}:{self.PORT}")
+            print(f"Server listening on {self.IP}:{self.PORT}")
     
     def stop(self):
         if self.socket:
