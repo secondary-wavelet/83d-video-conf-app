@@ -25,6 +25,7 @@ if __name__ == "__main__":
         client = Client(args.uid)
         await client.connect("localhost", 6969)
         print("Something happened!")
+        input()
         await client.disconnect()
         
     

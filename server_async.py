@@ -6,22 +6,32 @@ from room import Room
 from netutils import Connection
 
 class Server:
-    def __init__(self, IP, PORT):
+    def __init__(self, IP: str, PORT: int):
         self.IP = IP
         self.PORT = PORT
         self.rooms: dict[int, Room] = {}
         self.client_map: dict[str, Connection] = {}
 
-    def handle_request(self, req: dict) -> Iterator[tuple[Connection, dict]]:
-        """Parses the given JSON, and returns pairs of (IP, Response)"""
+    # async def handle_call_request(callees = list[str], caller = str, )
 
-        match req["type"]:        
-            # case "REGISTER":
+    async def handle_request(self, req: dict, sender_conn: Connection) -> None:
+        """Parses the given JSON, and calls the required functions"""
 
-            
+        match req["type"]:                    
             case "CALL":
+                sent, failed = [], []    
                 for callee in req["callees"]:
-                    yield self.client_map[callee], req
+                    if callee in self.client_map:
+                        sent.append(callee)
+                        await self.client_map[callee].write_prefixed_json(req)
+                    else:
+                        failed.append(callee)
+                await sender_conn.write_prefixed_json({
+                    "type": "CALL_ACK",
+                    "sent": sent,
+                    "failed": failed
+                })
+                
 
             case "RESPONSE":
                 yield self.client_map[req["caller"]], req
@@ -34,11 +44,11 @@ class Server:
         conn = Connection(reader, writer)
         client_id = await conn._read_prefixed_str()
         self.client_map[client_id] = conn
-        
+        print(f"Connected to {client_id}")
         while True:
             req = await conn.read_prefixed_json()
-            for target, response in self.handle_request(req):
-                await target.write_prefixed_json(response)
+            await self.handle_request(req, conn)
+            
 
 
     async def start(self):
