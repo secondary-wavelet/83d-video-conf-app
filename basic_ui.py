@@ -67,6 +67,31 @@ def open_reject_popup():
 
     popup.after(2000, popup.destroy)  # Auto close after 2 seconds
 
+def enter_username():
+    new_window = tk.Toplevel(root)
+    new_window.geometry("400x200")
+    new_window.title("Enter Username please")
+    new_window.configure(bg="#1fb230")
+
+    label = tk.Label(new_window, text="Please enter your username", font=("Helvetica", 11), bg="#1fb230")
+    label.pack(pady=20)
+
+    user_name_entry = tk.Entry(new_window)
+    user_name_entry.pack(pady=20)
+
+    def set_username():
+        entered_name = user_name_entry.get().strip()
+        if entered_name:
+            name_var.set(entered_name)
+            print(f"Username set to: {entered_name}")
+            new_window.destroy()
+        else:
+            messagebox.showwarning("Input Error", "Username cannot be empty.")
+
+    done_btn = tk.Button(new_window, text="Done", bg="#27ae60", fg="white",
+                         font=("Helvetica", 10), command=set_username)
+    done_btn.pack(pady=20)
+
 def start_call():
     global call_active
     call_active = True
@@ -91,6 +116,7 @@ def reject_call():
     send_to_server("CALL_REJECT")
     open_reject_popup()
 
+
 def end_call():
     global call_active
     call_active = False
@@ -111,7 +137,7 @@ def simulate_incoming_call():
 # Main GUI setup
 root = tk.Tk()
 root.title("Teams Lite")
-root.geometry("350x470")
+root.geometry("500x700")
 root.configure(bg="#ecf0f1")
 root.resizable(False, False)
 
@@ -126,9 +152,16 @@ title_label.pack(pady=15)
 status_var = tk.StringVar()
 status_var.set("Idle")
 
+name_var = tk.StringVar()
+name_var.set("xxyy")
+
 status_label = tk.Label(root, textvariable=status_var, font=('Helvetica', 12), bg="#dfe6e9", fg="#2c3e50",
                         width=30, relief="sunken")
 status_label.pack(pady=20)
+
+user_name_label = tk.Label(root, textvariable=name_var, font=('Helvetica', 12), bg="#dfe6e9", fg="#2c3e50",
+                        width=30, relief="sunken")
+user_name_label.pack(pady=20)
 
 # Button styling helper
 def make_button(text, command, color):
@@ -145,9 +178,13 @@ accept_btn = make_button("Accept Call", accept_call, "#27ae60")
 reject_btn = make_button("Reject Call", reject_call, "#c0392b")
 end_btn = make_button("End Call", end_call, "#7f8c8d")
 test_btn = make_button("Simulate Incoming Call", simulate_incoming_call, "#8e44ad")
+entername_btn = make_button("Enter Username", enter_username, "#90b228")
 mute_rad_btn = Radiobutton(root, text = "Mute")
 
+
+
 # Pack initial buttons
+entername_btn.pack(pady=7)
 start_btn.pack(pady=7)
 accept_btn.pack(pady=7)
 reject_btn.pack(pady=7)
