@@ -4,6 +4,7 @@ from tkinter import messagebox
 
 
 call_active = False  # Keeps track of whether a call is ongoing
+user_verified = True # Keeps track of whether user has a name
 
 
 def send_to_server(message):
@@ -12,7 +13,7 @@ def send_to_server(message):
 
 def update_buttons():
     if call_active:
-        start_btn.config(state="disabled")
+        start_btn.config(state="disabled")o
         accept_btn.config(state="disabled")
         reject_btn.config(state="disabled")
         end_btn.pack(pady=10)
@@ -84,7 +85,10 @@ def enter_username():
         if entered_name:
             name_var.set(entered_name)
             print(f"Username set to: {entered_name}")
+            user_verified = False
+            update_buttons()
             new_window.destroy()
+
         else:
             messagebox.showwarning("Input Error", "Username cannot be empty.")
 
@@ -153,7 +157,7 @@ status_var = tk.StringVar()
 status_var.set("Idle")
 
 name_var = tk.StringVar()
-name_var.set("xxyy")
+name_var.set("Please enter your name first!")
 
 status_label = tk.Label(root, textvariable=status_var, font=('Helvetica', 12), bg="#dfe6e9", fg="#2c3e50",
                         width=30, relief="sunken")
@@ -190,6 +194,10 @@ accept_btn.pack(pady=7)
 reject_btn.pack(pady=7)
 test_btn.pack(pady=10)
 update_buttons()  # Handle end_btn visibility
+
+start_btn.config(state="disabled")
+accept_btn.config(state="disabled")
+reject_btn.config(state="disabled")
 
 # Footer
 footer = tk.Label(root, text="Video call", font=("Helvetica", 9), bg="#ecf0f1", fg="#7f8c8d")
