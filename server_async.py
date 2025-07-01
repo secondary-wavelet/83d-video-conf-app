@@ -34,7 +34,7 @@ class Server:
                 
 
             case "RESPONSE":
-                yield self.client_map[req["caller"]], req
+                await self.client_map[req["caller"]].write_prefixed_json(req)
                 # add code for the actual call over here
 
             # case "CLOSE":
