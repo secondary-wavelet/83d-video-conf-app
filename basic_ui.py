@@ -13,7 +13,7 @@ def send_to_server(message):
 
 def update_buttons():
     if call_active:
-        start_btn.config(state="disabled")o
+        start_btn.config(state="disabled")
         accept_btn.config(state="disabled")
         reject_btn.config(state="disabled")
         end_btn.pack(pady=10)
