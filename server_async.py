@@ -4,6 +4,8 @@ from collections.abc import Iterator
 
 from room import Room
 from netutils import Connection
+from protocol import responses, broadcasts
+from protocol.msg_metadata import MsgType
 
 class Server:
     def __init__(self, IP: str, PORT: int):
@@ -11,32 +13,59 @@ class Server:
         self.PORT = PORT
         self.rooms: dict[int, Room] = {}
         self.client_map: dict[str, Connection] = {}
+        self.rid_ctr = 0
 
-    # async def handle_call_request(callees = list[str], caller = str, )
-
+    def get_rid(self):
+        self.rid_ctr += 1
+        return self.rid_ctr
+    
     async def handle_request(self, req: dict, sender_conn: Connection) -> None:
         """Parses the given JSON, and calls the required functions"""
 
+        print(f"req received: {req}")
+
         match req["type"]:                    
-            case "CALL":
-                sent, failed = [], []    
+            case MsgType.CALL_REQUEST:
+                print("received call request")
+                rid = self.get_rid()
+                self.rooms[rid] = Room(rid)
+                self.rooms[rid].add(req["caller"])
+                sent, failed = [], []
                 for callee in req["callees"]:
                     if callee in self.client_map:
                         sent.append(callee)
-                        await self.client_map[callee].write_prefixed_json(req)
+                        await self.client_map[callee].write_prefixed_json(
+                            broadcasts.invite_to_call(req["caller"], req["callees"], rid)
+                        )
                     else:
                         failed.append(callee)
-                await sender_conn.write_prefixed_json({
-                    "type": "CALL_ACK",
-                    "sent": sent,
-                    "failed": failed
-                })
+                await sender_conn.write_prefixed_json(responses.placed_call_ack(sent, failed))            
+            
+            case MsgType.CALL_REPLY:
+                # callee = req["callee"]
+                if req["is_accepted"]:
+                    self.rooms[req["room"]].add(req["callee"])
+
+            
+            case MsgType.ONLINE_USERS_REQUEST:
+                await sender_conn.write_prefixed_json(responses.online_list(self.client_map.keys))
+            
+            case MsgType.TOGGLE_AUDIO_REQUEST:
+                room: int = req["room"]
+                user = req["target"]
+                self.rooms[room].toggle_audio(user)
+                for client in self.rooms[room].clients:
+                    await self.client_map[client].write_prefixed_json(
+                        broadcasts.notify_toggled_audio() #write better
+                    )
                 
 
-            case "RESPONSE":
-                await self.client_map[req["caller"]].write_prefixed_json(req)
-                # add code for the actual call over here
-
+            case "TOGGLE_VIDEO":
+                room = req["room"]
+                user = req["target"]
+                self.rooms[room].toggle_audio(user)
+                # ADD CODE TO SEND AN ACK/BROADCAST
+                
             # case "CLOSE":
 
 
@@ -66,3 +95,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     s = Server(args.ip, args.port)
     asyncio.run(s.start())  
+
+    print(MsgType.CALL_ACK)

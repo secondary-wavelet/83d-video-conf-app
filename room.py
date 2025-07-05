@@ -1,14 +1,11 @@
-from client import Client
+# from client import Client
 
 class ClientState:
-    def __init__(self, ID, conn):
+    def __init__(self, ID):
         self.ID = ID
-        # self.conn = conn
         self.is_sending_audio = False
         self.is_sending_video = False
     
-    def __init__(self, client: Client):
-        self.ClientState(client.id, client.conn)
         
 
 class Room:
@@ -18,8 +15,10 @@ class Room:
     A Client can be in multiple Rooms at once. A Server can handle multiple Rooms at once
     """
 
-    def __init__(self):
+    def __init__(self, room_ID):
+        self.ID = room_ID
         self.clients: dict[str, ClientState] = {}
+        print("room created")
     
     def add(self, clientID: str):
         self.clients[clientID] = ClientState(clientID)

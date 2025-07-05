@@ -14,7 +14,6 @@ def recvall(socket: socket.socket, n: int) -> bytes:
     return bytes(msg)
 
 
-
 class Connection:
     def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         self.reader = reader
@@ -46,6 +45,10 @@ class Connection:
         msg = prefix + json_str
         self.writer.write(msg)
         await self.writer.drain()
+
+    async def request(self, req: dict) -> dict:
+        await self.write_prefixed_json(req)
+        return await self.read_prefixed_json()
     
     async def close(self):
         self.writer.close()
