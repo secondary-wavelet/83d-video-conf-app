@@ -2,7 +2,8 @@ import asyncio
 import argparse
 
 from netutils import Connection
-
+from media_sender import MediaSender
+from media_receiver import MediaReceiver
 from protocol import requests
 from protocol.msg_metadata import MsgCategory, MsgType
 
@@ -13,6 +14,8 @@ class Client:
         self.conn: Connection | None = None
         self.lock = asyncio.Lock()
         self.response_queue = asyncio.Queue()
+        self.media_sender = None
+        self.media_receiver = None
 
         self.on_incoming_call = None
         self.on_call_ended = None
@@ -26,6 +29,18 @@ class Client:
         
     def set_broadcast_handler(self, handler_fn):
         self.broadcast_handler = handler_fn
+
+    def start_media_stream(self, room_id):
+        self.media_sender = MediaSender(server_ip=self.server_ip, room_id=room_id, user_id=self.user_id)
+        self.media_receiver = MediaReceiver()  # optionally: choose a port
+        self.media_sender.start()
+        self.media_receiver.start()
+
+    def stop_media_stream(self):
+        if self.media_sender:
+            self.media_sender.stop()
+        if self.media_receiver:
+            self.media_receiver.stop()
 
     async def connect(self, server_ip: str, server_port: int):
         """Establishes a connection with the given IP"""
@@ -75,11 +90,19 @@ class Client:
     async def respond_to_call(self, caller_ID, is_accepted):
         req = requests.respond_to_call(self.ID, caller_ID, is_accepted)
         resp = await self.send_and_recv(req)
-        # if resp is not None:
+        if is_accepted:
+            media_ip = resp.get('media_ip', '127.0.0.1')
+            media_port = resp.get('media_port', 5005)
 
-        
-            
+            self.media_sender = MediaSender(media_ip, media_port)
+            self.media_sender.start()      
     
+    # async def end_call():
+    #     if self.media_sender:
+    #         self.media_sender.stop()
+    #         self.media_sender = None
+
+
     async def req_online_list(self):
         req = requests.req_online_list()
         resp = await self.send_and_recv
