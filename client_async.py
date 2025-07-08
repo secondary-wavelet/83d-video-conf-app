@@ -2,8 +2,7 @@ import asyncio
 import argparse
 
 from netutils import Connection
-from media_sender import MediaSender
-from media_receiver import MediaReceiver
+from mediautils import MediaConnection
 from protocol import requests
 from protocol.msg_metadata import MsgCategory, MsgType
 
@@ -14,12 +13,11 @@ class Client:
         self.conn: Connection | None = None
         self.lock = asyncio.Lock()
         self.response_queue = asyncio.Queue()
-        self.media_sender = None
-        self.media_receiver = None
+        self.media_connection = None
 
         self.on_incoming_call = None
         self.on_call_ended = None
-        self.schedule_callback = None  # NEW: a function like root.after
+        self.schedule_callback = None 
     
     def set_event_handlers(self, *, on_incoming_call=None, on_call_ended=None, on_placing_call=None, scheduler=None):
         self.on_incoming_call = on_incoming_call
@@ -31,20 +29,19 @@ class Client:
         self.broadcast_handler = handler_fn
 
     def start_media_stream(self, room_id):
-        self.media_sender = MediaSender(server_ip=self.server_ip, room_id=room_id, user_id=self.user_id)
-        self.media_receiver = MediaReceiver()  # optionally: choose a port
-        self.media_sender.start()
-        self.media_receiver.start()
+        self.media_connection = MediaConnection(
+            self.server_ip, self.user_id, room_id
+        )
+        self.media_connection.start()
 
     def stop_media_stream(self):
-        if self.media_sender:
-            self.media_sender.stop()
-        if self.media_receiver:
-            self.media_receiver.stop()
+        if self.media_connection:
+            self.media_connection.stop()
 
     async def connect(self, server_ip: str, server_port: int):
         """Establishes a connection with the given IP"""
-
+        self.server_ip = server_ip
+        self.user_id = self.ID
         self.conn = Connection(*await asyncio.open_connection(server_ip, server_port))        
         await self.conn._write_prefixed_str(self.ID)
 
@@ -59,9 +56,9 @@ class Client:
             case MsgType.CALL_BROADCAST:
                 if self.on_incoming_call:
                     if self.schedule_callback:
-                        self.schedule_callback(0, self.on_incoming_call, msg["caller"])
+                        self.schedule_callback(0, self.on_incoming_call, msg["caller"], msg["room"])
                     else:
-                        self.on_incoming_call(msg["caller"])
+                        self.on_incoming_call(msg["caller"], msg["room"])
     
     async def listen(self):
         while True:
@@ -84,18 +81,16 @@ class Client:
     async def place_call(self, *callees: str):
         req = requests.place_call(self.ID, callees)
         resp = await self.send_and_recv(req)
-        if resp: return True
+        if resp: 
+            self.start_media_stream(resp['room'])
+            return True
         else: return False
 
-    async def respond_to_call(self, caller_ID, is_accepted):
-        req = requests.respond_to_call(self.ID, caller_ID, is_accepted)
-        resp = await self.send_and_recv(req)
+    async def respond_to_call(self, caller_ID, room_id, is_accepted):
         if is_accepted:
-            media_ip = resp.get('media_ip', '127.0.0.1')
-            media_port = resp.get('media_port', 5005)
-
-            self.media_sender = MediaSender(media_ip, media_port)
-            self.media_sender.start()      
+            self.start_media_stream(room_id)
+        req = requests.reply_to_call(self.ID, caller_ID, room_id, is_accepted)
+        resp = await self.send_and_recv(req)
     
     # async def end_call():
     #     if self.media_sender:
@@ -105,7 +100,8 @@ class Client:
 
     async def req_online_list(self):
         req = requests.req_online_list()
-        resp = await self.send_and_recv
+        resp = await self.send_and_recv(req)
+        return resp["online"]
     
     
 

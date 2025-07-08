@@ -265,7 +265,7 @@ def show_online_users():
     close_btn = tk.Button(popup, text="Close", command=popup.destroy, bg="#636e72", fg="white")
     close_btn.pack(pady=10)
 
-def notify_incoming_call(caller_id):
+def notify_incoming_call(caller_id, room_id):
     print("notify_incoming_call called with:", caller_id)
     root.deiconify()
     response = messagebox.askquestion("Incoming Call", f"{caller_id} is calling. Accept?")
@@ -273,12 +273,12 @@ def notify_incoming_call(caller_id):
         print("Incoming call accepted")
         accept_call()
         asyncio.run_coroutine_threadsafe(
-            client.respond_to_call(caller_ID=caller_id, is_accepted=True), loop
+            client.respond_to_call(caller_ID=caller_id, is_accepted=True, room_id=room_id), loop
         )
     else:
         print("Incoming call rejected")
         asyncio.run_coroutine_threadsafe(
-            client.respond_to_call(caller_ID=caller_id, is_accepted=False), loop
+            client.respond_to_call(caller_ID=caller_id, is_accepted=False, room_id=room_id), loop
         )
         reject_call()
 

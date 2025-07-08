@@ -15,12 +15,13 @@ def place_call(caller_ID: str, callees: tuple[str]) -> dict:
         "callees": callees
     }
 
-def reply_to_call(responder_ID, caller: str, room: int, is_accepted: bool) -> dict:
+def reply_to_call(responder_ID: str, caller: str, room: int, is_accepted: bool) -> dict:
     return {
         "type": MsgType.CALL_REPLY,
         "category": MsgCategory.request,
         "callee": responder_ID,
         "caller": caller,
+        "room": room,
         "is_accepted": is_accepted
     }
 
