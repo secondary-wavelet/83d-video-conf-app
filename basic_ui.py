@@ -62,9 +62,7 @@ def update_buttons():
         reject_btn.config(state="normal")
         end_btn.pack_forget()
 
-def open_call_window():
-
-    # call_window is like root, but since are opening a new window with TopLevel, we are giving it a new name
+def open_call_window(room_id):
     call_window = tk.Toplevel(root)
     call_window.title("Call in Progress")
     call_window.geometry("1200x600")
@@ -72,29 +70,25 @@ def open_call_window():
     call_window.resizable(True, True)
 
     video_frame = tk.Frame(call_window)
-    video_frame.pack(pady = 20)
+    video_frame.pack(pady=20)
 
-    # Caller video placeholder
     caller_video = tk.Label(video_frame, text="Your Video", bg="black", fg="white",
                             width=50, height=20, font=("Helvetica", 10))
     caller_video.grid(row=0, column=0, padx=10)
 
-    # Callee video placeholder
     callee_video = tk.Label(video_frame, text="Caller Video", bg="gray", fg="white",
                             width=50, height=20, font=("Helvetica", 10))
     callee_video.grid(row=0, column=1, padx=10)
 
-    # Call status message
     msg = tk.Label(call_window, text="You're on a call.", font=("Helvetica", 14), bg="#dff9fb")
     msg.pack(pady=40)
 
-    # Mute button
-    
-
-    # End call button
     close_btn = tk.Button(call_window, text="End Call", bg="#3d3434", fg="white", font=("Helvetica", 10),
                           width=20, command=lambda: [call_window.destroy(), end_call()])
     close_btn.pack(pady=20)
+
+    return callee_video  # Return the label
+
 
 def open_reject_popup():
     popup = tk.Toplevel(root)
@@ -145,7 +139,6 @@ def start_call():
 
 
 def place_call():
-    """Open a dialog to enter the ID of the user to call."""
     popup = tk.Toplevel(root)
     popup.title("Place Call")
     popup.geometry("350x180")
@@ -161,21 +154,25 @@ def place_call():
         callee_id = entry.get().strip()
         if callee_id:
             popup.destroy()
-            # This should be an async call; use run_coroutine_threadsafe
             future = asyncio.run_coroutine_threadsafe(client.place_call(callee_id), loop)
             try:
-                isplaced = future.result
-                if isplaced:
-                    open_call_window()
+                resp = future.result(timeout=5)
+                if resp and "room" in resp:
+                    room_id = resp["room"]
+                    label = open_call_window(room_id)
+                    client.start_media_stream(room_id, video_label=label)
+                    status_var.set(f"Calling {callee_id}...")
+                else:
+                    messagebox.showerror("Call Failed", "Call could not be placed.")
             except Exception as e:
                 print("Call failed:", e)
                 messagebox.showerror("Error", f"Call failed: {e}")
-            status_var.set(f"Calling {callee_id}...")
         else:
             messagebox.showwarning("Input Error", "User ID cannot be empty.")
 
     call_btn = tk.Button(popup, text="Call", command=do_call, bg="#2980b9", fg="white")
     call_btn.pack(pady=10)
+
 
 def place_call_alt():
     """Open a dialog with a dropdown of online users to call."""
@@ -234,7 +231,7 @@ def end_call():
     call_active = False
     status_var.set("Call ended")
     print("Call ended")
-    send_to_server("CALL_END")
+    # send_to_server("CALL_END")
     update_buttons()
 
 def show_online_users():
@@ -271,7 +268,9 @@ def notify_incoming_call(caller_id, room_id):
     response = messagebox.askquestion("Incoming Call", f"{caller_id} is calling. Accept?")
     if response == 'yes':
         print("Incoming call accepted")
-        accept_call()
+        label = open_call_window(room_id)  # Get the label
+        client.start_media_stream(room_id, video_label=label)  # Start media with label
+
         asyncio.run_coroutine_threadsafe(
             client.respond_to_call(caller_ID=caller_id, is_accepted=True, room_id=room_id), loop
         )
@@ -281,6 +280,7 @@ def notify_incoming_call(caller_id, room_id):
             client.respond_to_call(caller_ID=caller_id, is_accepted=False, room_id=room_id), loop
         )
         reject_call()
+
 
 if __name__ == "__main__":
     # Main GUI setup

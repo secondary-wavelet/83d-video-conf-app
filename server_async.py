@@ -39,7 +39,7 @@ class Server:
                         )
                     else:
                         failed.append(callee)
-                await sender_conn.write_prefixed_json(responses.placed_call_ack(sent, failed))            
+                await sender_conn.write_prefixed_json(responses.placed_call_ack(rid, sent, failed))            
             
             case MsgType.CALL_REPLY:
                 # callee = req["callee"]
@@ -48,7 +48,7 @@ class Server:
 
             
             case MsgType.ONLINE_USERS_REQUEST:
-                await sender_conn.write_prefixed_json(responses.online_list(self.client_map.keys))
+                await sender_conn.write_prefixed_json(responses.online_list(self.client_map.keys()))
             
             case MsgType.TOGGLE_AUDIO_REQUEST:
                 room: int = req["room"]

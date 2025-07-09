@@ -6,12 +6,16 @@ import pyaudio
 import time
 import threading
 from queue import PriorityQueue
+from PIL import Image, ImageTk
 
 
 class MediaReceiver:
-    def __init__(self, listen_port=5005, buffer_delay=0.1):
+    def __init__(self, listen_port=5005, buffer_delay=0.1, video_label=None):
         self.listen_port = listen_port
         self.buffer_delay = buffer_delay
+        self.video_label = video_label  # <-- Store Tkinter label
+        self.tk_img = None  # <-- Keep reference to PhotoImage
+
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("", listen_port))
         self.sock.setblocking(False)
@@ -36,6 +40,9 @@ class MediaReceiver:
         self.playback_thread = threading.Thread(target=self._playback_loop, daemon=True)
         self.receive_thread.start()
         self.playback_thread.start()
+
+    def set_display_callback(self, callback):
+        self.tk_callback = callback
 
     def stop(self):
         self.running = False
@@ -69,12 +76,21 @@ class MediaReceiver:
             if now - ts >= self.buffer_delay:
                 _, pkt = self.sync_buffer.get()
 
+                # Decode video frame
                 frame = cv2.imdecode(np.frombuffer(pkt['video'], np.uint8), cv2.IMREAD_COLOR)
-                cv2.imshow("Received Video", frame)
-                if cv2.waitKey(1) == ord('q'):
-                    self.stop()
-                    break
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                img = Image.fromarray(frame_rgb)
+                tk_img = ImageTk.PhotoImage(img)
 
+                # Display video in Tkinter
+                if self.video_label:
+                    self.video_label.after(0, self._update_label_image, tk_img)
+
+                # Play audio
                 self.audio_stream.write(pkt['audio'])
             else:
                 time.sleep(0.005)
+
+    def _update_label_image(self, tk_img):
+        self.tk_img = tk_img  # prevent garbage collection
+        self.video_label.config(image=self.tk_img)

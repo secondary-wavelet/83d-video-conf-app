@@ -28,9 +28,9 @@ class Client:
     def set_broadcast_handler(self, handler_fn):
         self.broadcast_handler = handler_fn
 
-    def start_media_stream(self, room_id):
+    def start_media_stream(self, room_id, video_label=None):
         self.media_connection = MediaConnection(
-            self.server_ip, self.user_id, room_id
+            self.server_ip, self.user_id, room_id, video_label=video_label
         )
         self.media_connection.start()
 
@@ -81,10 +81,12 @@ class Client:
     async def place_call(self, *callees: str):
         req = requests.place_call(self.ID, callees)
         resp = await self.send_and_recv(req)
-        if resp: 
-            self.start_media_stream(resp['room'])
-            return True
-        else: return False
+        print("[DEBUG] place_call response:", resp) 
+        if resp:
+            return resp  # return dict with room id
+        else:
+            return None
+
 
     async def respond_to_call(self, caller_ID, room_id, is_accepted):
         if is_accepted:
@@ -98,8 +100,8 @@ class Client:
     #         self.media_sender = None
 
 
-    async def req_online_list(self):
-        req = requests.req_online_list()
+    async def show_online_users(self):
+        req = requests.get_online_list()
         resp = await self.send_and_recv(req)
         return resp["online"]
     

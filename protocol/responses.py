@@ -1,11 +1,12 @@
 from protocol.msg_metadata import MsgType, MsgCategory
 
-def placed_call_ack(sent: list[str], failed: list[str]) -> dict:
+def placed_call_ack(sent: list[str], failed: list[str], room: int) -> dict:
     return {
         "type": MsgType.CALL_ACK,
         "category": MsgCategory.response,
         "sent": sent,
-        "failed": failed
+        "failed": failed,
+        "room": room
     }
 
 def online_list(online: list[str]) -> dict:
